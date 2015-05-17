@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <wiringPi.h>
+#include "circular.h"
 
 #define INPUT_PIN                    5
 #define BIT_LENGTH                2000
@@ -11,6 +12,10 @@
 #define BIT_LENGTH_THRES_HIGH     (BIT_LENGTH + BIT_LENGTH_TOLERANCE)
 #define HALFBIT_LENGTH_THRES_LOW  (BIT_LENGTH_THRES_LOW  / 2)
 #define HALFBIT_LENGTH_THRES_HIGH (BIT_LENGTH_THRES_HIGH / 2)
+
+#define BIT_BUFFER_SIZE          4096
+unsigned char bitBuffer[BIT_BUFFER_SIZE];
+CIRCULAR_DATA circBits;
 
 void RxInterrupt(void)
 {
@@ -25,8 +30,6 @@ void RxInterrupt(void)
   uint32_t bitLength = currEdge - lastEdge;
   lastEdge = currEdge;
 
-  // printf("%d -> ", state);
-  
   switch(state) {
     case Init: {
       state = BitStartReceived;
@@ -36,7 +39,7 @@ void RxInterrupt(void)
     case BitStartReceived: {
       if((bitLength >= BIT_LENGTH_THRES_LOW) && (bitLength <= BIT_LENGTH_THRES_HIGH)) {
         // Zero received
-        printf("0\n");
+        CircularPutByte(&circBits, 0);
       }
       else if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // First half of a One received
@@ -48,7 +51,7 @@ void RxInterrupt(void)
     case HalfBitReceived: {
       if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // Second half of a One received
-        printf("1\n");
+        CircularPutByte(&circBits, 1);
       }
       state = BitStartReceived;
     }
@@ -59,11 +62,12 @@ void RxInterrupt(void)
     }
     break;
   }
-  // printf("%d\n", state);
 }
 
 int main(void)
 {
+  CircularInitialize(&circBits, bitBuffer, BIT_BUFFER_SIZE);
+
   if(wiringPiSetupGpio()) {
     printf("wiringPiSetupGpio() failed!\n");
     return 1;
@@ -81,6 +85,10 @@ int main(void)
   }
 
   while(1) {
+    int bit;
+    while((bit = CircularGetByte(&circBits)) != CIRCULAR_EOB) {
+      printf("%d\n", bit);
+    }
     sleep(1);
   }
 
