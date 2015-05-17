@@ -2,6 +2,7 @@ TARGET = wt440hrx
 LIBS = -lwiringPi
 CC = gcc
 CFLAGS = -O3 -Wall -fomit-frame-pointer
+LFLAGS = -s
 
 .PHONY: default all clean
 
@@ -17,7 +18,7 @@ HEADERS = $(wildcard *.h)
 .PRECIOUS: $(TARGET) $(OBJECTS)
 
 $(TARGET): $(OBJECTS)
-	$(CC) $(OBJECTS) -Wall $(LIBS) -o $@
+	$(CC) $(LFLAGS) $(OBJECTS) -Wall $(LIBS) -o $@
 
 clean:
 	-rm -f *.o

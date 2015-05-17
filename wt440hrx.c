@@ -1,8 +1,8 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <wiringPi.h>
-#include "circular.h"
 
 #define INPUT_PIN                    5
 #define BIT_LENGTH                2000
@@ -13,9 +13,11 @@
 #define HALFBIT_LENGTH_THRES_LOW  (BIT_LENGTH_THRES_LOW  / 2)
 #define HALFBIT_LENGTH_THRES_HIGH (BIT_LENGTH_THRES_HIGH / 2)
 
-#define BIT_BUFFER_SIZE          4096
-unsigned char bitBuffer[BIT_BUFFER_SIZE];
-CIRCULAR_DATA circBits;
+int pipefd[2];
+typedef struct {
+  uint8_t bit;
+  uint32_t bitLength;
+} BitType;
 
 void RxInterrupt(void)
 {
@@ -30,6 +32,8 @@ void RxInterrupt(void)
   uint32_t bitLength = currEdge - lastEdge;
   lastEdge = currEdge;
 
+  BitType bitInfo;
+
   switch(state) {
     case Init: {
       state = BitStartReceived;
@@ -39,7 +43,12 @@ void RxInterrupt(void)
     case BitStartReceived: {
       if((bitLength >= BIT_LENGTH_THRES_LOW) && (bitLength <= BIT_LENGTH_THRES_HIGH)) {
         // Zero received
-        CircularPutByte(&circBits, 0);
+	bitInfo.bit = 0;
+	bitInfo.bitLength = bitLength;
+	if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+	  perror("write() failed!");
+	  exit(EXIT_FAILURE);
+	}
       }
       else if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // First half of a One received
@@ -51,7 +60,12 @@ void RxInterrupt(void)
     case HalfBitReceived: {
       if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // Second half of a One received
-        CircularPutByte(&circBits, 1);
+	bitInfo.bit = 1;
+	bitInfo.bitLength = bitLength;
+	if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+	  perror("write() failed!");
+	  exit(EXIT_FAILURE);
+	}
       }
       state = BitStartReceived;
     }
@@ -66,17 +80,22 @@ void RxInterrupt(void)
 
 int main(void)
 {
-  CircularInitialize(&circBits, bitBuffer, BIT_BUFFER_SIZE);
+  BitType bitInfo;
+
+  if(pipe(pipefd) == -1) {
+    perror("pipe() failed!");
+    exit(EXIT_FAILURE);
+  }
 
   if(wiringPiSetupGpio()) {
-    printf("wiringPiSetupGpio() failed!\n");
-    return 1;
+    perror("wiringPiSetupGpio() failed!");
+    exit(EXIT_FAILURE);
   }
 
   if(wiringPiISR(INPUT_PIN, INT_EDGE_BOTH, &RxInterrupt))
   {
-    printf("wiringPiISR() failed!\n");
-    return 1;
+    perror("wiringPiISR() failed!");
+    exit(EXIT_FAILURE);
   }
 
   if(piHiPri(99)) {
@@ -85,11 +104,11 @@ int main(void)
   }
 
   while(1) {
-    int bit;
-    while((bit = CircularGetByte(&circBits)) != CIRCULAR_EOB) {
-      printf("%d\n", bit);
+    if(read(pipefd[0], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+      printf("read() failed!\n");
+      return 1;
     }
-    sleep(1);
+    printf("%u (%u)\n", bitInfo.bit, bitInfo.bitLength);
   }
 
   return 0;
