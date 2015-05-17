@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <unistd.h>
 #include <wiringPi.h>
 
 #define INPUT_PIN                    5
@@ -74,7 +75,13 @@ int main(void)
     return 1;
   }
 
+  if(piHiPri(99)) {
+    printf("piHiPri() failed!\n");
+    return 1;
+  }
+
   while(1) {
+    sleep(1);
   }
 
   return 0;
