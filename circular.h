@@ -29,11 +29,6 @@
 #ifndef CIRCULAR_H
 #define CIRCULAR_H
 
-/***********************************************************************************************************************
- * Includes
- **********************************************************************************************************************/
-#include <stdint.h>
-
 /**********************************************************************************************************************/
 /** Circular Buffer Data Structure
  ***********************************************************************************************************************
@@ -48,25 +43,25 @@
  **********************************************************************************************************************/
 typedef struct {
   /// Pointer to the memory buffer
-  uint8_t *buffer;
+  unsigned char *buffer;
   /// Size of the memory buffer
-  uint16_t size;
+  unsigned int size;
   /// The beginning position of the buffer
-  uint16_t start;
+  unsigned int start;
   /// The number of elements actually in the buffer
-  uint16_t end;
+  unsigned int end;
 } CIRCULAR_DATA;
 
 /// Definition for end of buffer value
 /// @ingroup circular_m
-#define CIRCULAR_EOB    ((uint16_t)-1)
+#define CIRCULAR_EOB    (-1)
 
 /***********************************************************************************************************************
  * Function prototypes
  **********************************************************************************************************************/
-void CircularInitialize(CIRCULAR_DATA *, uint8_t *, uint16_t);
-void CircularPutByte(CIRCULAR_DATA *, uint8_t );
-uint16_t CircularGetByte(CIRCULAR_DATA *);
-uint16_t CircularGetNumberOfBytes(CIRCULAR_DATA *);
+void CircularInitialize(CIRCULAR_DATA *, unsigned char *, unsigned int);
+void CircularPutByte(CIRCULAR_DATA *, unsigned char);
+int CircularGetByte(CIRCULAR_DATA *);
+unsigned int CircularGetNumberOfBytes(CIRCULAR_DATA *);
 
 #endif // CIRCULAR_H

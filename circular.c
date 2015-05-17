@@ -29,9 +29,9 @@ void CircularInitialize(
   /// Pointer to the data structure
   CIRCULAR_DATA *data,
   /// Pointer to memory for the circular buffer
-  uint8_t *buffer,
+  unsigned char *buffer,
   /// Size of the circular buffer
-  uint16_t size)
+  unsigned int size)
 {
   // Initialize the buffer pointer
   data->buffer = buffer;
@@ -55,7 +55,7 @@ void CircularPutByte(
   /// Pointer to the data structure
   CIRCULAR_DATA *data,
   /// Byte to put into the buffer
-  uint8_t byte)
+  unsigned char byte)
 {
   // Put the byte into the buffer
   data->buffer[data->end] = byte;
@@ -77,12 +77,12 @@ void CircularPutByte(
  * @ingroup circular_m
  *
  **********************************************************************************************************************/
-uint16_t CircularGetByte(
+int CircularGetByte(
   /// Pointer to the data structure
   CIRCULAR_DATA *data)
 {
   // We will use this variable for the return value
-  uint16_t byte;
+  int byte;
 
   // Check if we actually have something in the buffer
   if(data->start != data->end) {
@@ -113,7 +113,7 @@ uint16_t CircularGetByte(
  * @ingroup circular_m
  *
  **********************************************************************************************************************/
-uint16_t CircularGetNumberOfBytes(
+unsigned int CircularGetNumberOfBytes(
   /// Pointer to the data structure
   CIRCULAR_DATA *data)
 {
