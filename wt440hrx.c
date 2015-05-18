@@ -17,17 +17,17 @@ int pipefd[2];
 
 typedef struct {
   uint8_t bit;
-  uint32_t bitLength;
+  uint32_t timeStamp;
 } BitType;
 
-void RxAlert(int gpio, int level, uint32_t currEdge)
+void RxAlert(int gpio, int level, uint32_t timeStamp)
 {
   static enum {
     Init,
     BitStartReceived,
     HalfBitReceived
   } state = Init;
-  static uint32_t lastEdge = 0;
+  static uint32_t lastTimeStamp = 0;
   uint32_t bitLength;
   BitType bitInfo;
 
@@ -35,7 +35,7 @@ void RxAlert(int gpio, int level, uint32_t currEdge)
     return;
   }
 
-  bitLength = currEdge - lastEdge;
+  bitLength = timeStamp - lastTimeStamp;
 
   switch(state) {
     case Init: {
@@ -47,9 +47,9 @@ void RxAlert(int gpio, int level, uint32_t currEdge)
       if((bitLength >= BIT_LENGTH_THRES_LOW) && (bitLength <= BIT_LENGTH_THRES_HIGH)) {
         // Zero received
         bitInfo.bit = 0;
-        bitInfo.bitLength = bitLength;
+        bitInfo.timeStamp = timeStamp;
         if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-          perror("write() failed!");
+          perror("write()");
           exit(EXIT_FAILURE);
         }
       }
@@ -64,9 +64,9 @@ void RxAlert(int gpio, int level, uint32_t currEdge)
       if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // Second half of a One received
         bitInfo.bit = 1;
-        bitInfo.bitLength = bitLength;
+        bitInfo.timeStamp = timeStamp;
         if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-          perror("write() failed!");
+          perror("write()");
           exit(EXIT_FAILURE);
         }
       }
@@ -80,7 +80,7 @@ void RxAlert(int gpio, int level, uint32_t currEdge)
     break;
   }
 
-  lastEdge = currEdge;
+  lastTimeStamp = timeStamp;
 }
 
 int main(void)
@@ -113,7 +113,7 @@ int main(void)
       printf("read() failed!\n");
       return 1;
     }
-    printf("%u (%u)\n", bitInfo.bit, bitInfo.bitLength);
+    printf("%u (%u)\n", bitInfo.bit, bitInfo.timeStamp);
   }
 
   return 0;
