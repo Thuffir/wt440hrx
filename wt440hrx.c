@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
-#include <wiringPi.h>
+#include <pigpio.h>
 
 #define INPUT_PIN                    5
 #define BIT_LENGTH                2000
@@ -14,25 +14,28 @@
 #define HALFBIT_LENGTH_THRES_HIGH (BIT_LENGTH_THRES_HIGH / 2)
 
 int pipefd[2];
+
 typedef struct {
   uint8_t bit;
   uint32_t bitLength;
 } BitType;
 
-void RxInterrupt(void)
+void RxAlert(int gpio, int level, uint32_t currEdge)
 {
-  static uint32_t lastEdge = 0;
   static enum {
     Init,
     BitStartReceived,
     HalfBitReceived
   } state = Init;
-
-  uint32_t currEdge = micros();
-  uint32_t bitLength = currEdge - lastEdge;
-  lastEdge = currEdge;
-
+  static uint32_t lastEdge = 0;
+  uint32_t bitLength;
   BitType bitInfo;
+
+  if(gpio != INPUT_PIN) {
+    return;
+  }
+
+  bitLength = currEdge - lastEdge;
 
   switch(state) {
     case Init: {
@@ -76,6 +79,8 @@ void RxInterrupt(void)
     }
     break;
   }
+
+  lastEdge = currEdge;
 }
 
 int main(void)
@@ -83,24 +88,24 @@ int main(void)
   BitType bitInfo;
 
   if(pipe(pipefd) == -1) {
-    perror("pipe() failed!");
+    perror("pipe()");
     exit(EXIT_FAILURE);
   }
 
-  if(wiringPiSetupGpio()) {
-    perror("wiringPiSetupGpio() failed!");
+  if(gpioCfgClock(10, PI_CLOCK_PCM, 0)) {
+    perror("gpioCfgClock()");
     exit(EXIT_FAILURE);
   }
 
-  if(wiringPiISR(INPUT_PIN, INT_EDGE_BOTH, &RxInterrupt))
+  if(gpioInitialise() < 0)
   {
-    perror("wiringPiISR() failed!");
+    perror("gpioInitialise()");
     exit(EXIT_FAILURE);
   }
 
-  if(piHiPri(99)) {
-    printf("piHiPri() failed!\n");
-    return 1;
+  if(gpioSetAlertFunc(INPUT_PIN, RxAlert)) {
+    perror("gpioSetAlertFunc()");
+    exit(EXIT_FAILURE);
   }
 
   while(1) {

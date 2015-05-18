@@ -1,5 +1,5 @@
 TARGET = wt440hrx
-LIBS = -lwiringPi
+LIBS = -lpigpio -lpthread -lrt
 CC = gcc
 CFLAGS = -O3 -Wall -fomit-frame-pointer
 LFLAGS = -s
