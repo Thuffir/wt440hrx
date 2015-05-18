@@ -43,12 +43,12 @@ void RxInterrupt(void)
     case BitStartReceived: {
       if((bitLength >= BIT_LENGTH_THRES_LOW) && (bitLength <= BIT_LENGTH_THRES_HIGH)) {
         // Zero received
-	bitInfo.bit = 0;
-	bitInfo.bitLength = bitLength;
-	if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-	  perror("write() failed!");
-	  exit(EXIT_FAILURE);
-	}
+        bitInfo.bit = 0;
+        bitInfo.bitLength = bitLength;
+        if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+          perror("write() failed!");
+          exit(EXIT_FAILURE);
+        }
       }
       else if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // First half of a One received
@@ -60,12 +60,12 @@ void RxInterrupt(void)
     case HalfBitReceived: {
       if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // Second half of a One received
-	bitInfo.bit = 1;
-	bitInfo.bitLength = bitLength;
-	if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-	  perror("write() failed!");
-	  exit(EXIT_FAILURE);
-	}
+        bitInfo.bit = 1;
+        bitInfo.bitLength = bitLength;
+        if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+          perror("write() failed!");
+          exit(EXIT_FAILURE);
+        }
       }
       state = BitStartReceived;
     }
