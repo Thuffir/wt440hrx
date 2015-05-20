@@ -83,10 +83,8 @@ void RxAlert(int gpio, int level, uint32_t timeStamp)
   lastTimeStamp = timeStamp;
 }
 
-int main(void)
+void Init(void)
 {
-  BitType bitInfo;
-
   if(pipe(pipefd) == -1) {
     perror("pipe()");
     exit(EXIT_FAILURE);
@@ -107,14 +105,26 @@ int main(void)
     perror("gpioSetAlertFunc()");
     exit(EXIT_FAILURE);
   }
+}
+
+void RxData(void)
+{
+  BitType bitInfo;
 
   while(1) {
     if(read(pipefd[0], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-      printf("read() failed!\n");
-      return 1;
+      printf("read()");
+      exit(EXIT_FAILURE);
     }
     printf("%u (%u)\n", bitInfo.bit, bitInfo.timeStamp);
   }
+}
+
+int main(void)
+{
+
+  Init();
+  RxData();
 
   return 0;
 }
