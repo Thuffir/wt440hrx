@@ -173,7 +173,7 @@ void Init(void)
 /***********************************************************************************************************************
  * Decode received bits into a WT440H Message
  **********************************************************************************************************************/
-void RxData(void)
+WT440hDataType RxData(void)
 {
   // Preamble bits
   static const uint8_t preamble[] = {1, 1, 0, 0};
@@ -267,18 +267,7 @@ void RxData(void)
     bitNr++;
   }
 
-  printf("House code  : %u\n" \
-         "Channel     : %u\n" \
-         "Status      : %u\n" \
-         "Humidity    : %u\n" \
-         "Temperature : %.1f\n" \
-         "Sequence Nr.: %u\n\n", \
-         data.houseCode,
-         data.channel,
-         data.status,
-         data.humidity,
-         ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16),
-         data.sequneceNr);
+  return data;
 }
 
 /***********************************************************************************************************************
@@ -286,13 +275,27 @@ void RxData(void)
  **********************************************************************************************************************/
 int main(void)
 {
+  // Decoded WT440H data
+  WT440hDataType data;
 
   // Do init stuff
   Init();
 
   // Receive and decode messages
   while(1) {
-    RxData();
+    data = RxData();
+    printf("House code  : %u\n" \
+           "Channel     : %u\n" \
+           "Status      : %u\n" \
+           "Humidity    : %u\n" \
+           "Temperature : %.1f\n" \
+           "Sequence Nr.: %u\n\n", \
+           data.houseCode,
+           data.channel,
+           data.status,
+           data.humidity,
+           ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16),
+           data.sequneceNr);
   }
 
   return 0;
