@@ -267,20 +267,18 @@ void RxData(void)
     bitNr++;
   }
 
-  printf("House code : %u\n" \
-         "Channel    : %u\n" \
-         "Status     : %u\n" \
-         "Humidity   : %u\n" \
-         "Temperature: %.1f\n" \
-         "Sequnce Nr.: %u\n" \
-         "Checksum   : %u\n\n", \
+  printf("House code  : %u\n" \
+         "Channel     : %u\n" \
+         "Status      : %u\n" \
+         "Humidity    : %u\n" \
+         "Temperature : %.1f\n" \
+         "Sequence Nr.: %u\n\n", \
          data.houseCode,
          data.channel,
          data.status,
          data.humidity,
          ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16),
-         data.sequneceNr,
-         checksum);
+         data.sequneceNr);
 }
 
 /***********************************************************************************************************************
