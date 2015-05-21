@@ -48,7 +48,6 @@ typedef struct {
   uint8_t tempInteger;
   uint8_t tempFraction;
   uint8_t sequneceNr;
-  uint8_t checksum;
 } WT440hDataType;
 
 /***********************************************************************************************************************
@@ -186,6 +185,8 @@ void RxData(void)
   uint32_t prevTimeStamp = 0, bitLength;
   // Bit number counter
   uint8_t bitNr;
+  // Checksum
+  uint8_t checksum = 0;
 
   // Data is 36 bits long
   for(bitNr = 0; bitNr < 36;) {
@@ -202,8 +203,9 @@ void RxData(void)
     if(bitNr > 0) {
       // Check bit Length
       if((bitLength < BIT_LENGTH_THRES_LOW) || (bitLength > BIT_LENGTH_THRES_HIGH)) {
-//        printf("Wrong bitlength %u at bit %u\n", bitLength, bitNr);
+        // printf("Wrong bitlength %u at bit %u\n", bitLength, bitNr);
         bitNr = 0;
+        checksum = 0;
         memset(&data, 0, sizeof(data));
         continue;
       }
@@ -212,8 +214,9 @@ void RxData(void)
     // Preamble [0 .. 3]
     if(bitNr <= 3) {
       if(bitInfo.bit != preamble[bitNr]) {
-//        printf("Wrong preamble %u at bit %u\n", bitInfo.bit, bitNr);
+        // printf("Wrong preamble %u at bit %u\n", bitInfo.bit, bitNr);
         bitNr = 0;
+        checksum = 0;
         memset(&data, 0, sizeof(data));
         continue;
       }
@@ -246,10 +249,9 @@ void RxData(void)
     else if((bitNr >= 32) && (bitNr <= 33)) {
       data.sequneceNr = (data.sequneceNr << 1) | bitInfo.bit;
     }
-    // Checksum [34 .. 35]
-    else if((bitNr >= 34) && (bitNr <= 35)) {
-      data.checksum = (data.checksum << 1) | bitInfo.bit;
-    }
+
+    // Update checksum
+    checksum ^= bitInfo.bit << (bitNr & 1);
 
     // Increment bit pointer
     bitNr++;
@@ -268,7 +270,7 @@ void RxData(void)
          data.humidity,
          ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16),
          data.sequneceNr,
-         data.checksum);
+         checksum);
 }
 
 /***********************************************************************************************************************
