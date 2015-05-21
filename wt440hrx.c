@@ -252,6 +252,16 @@ void RxData(void)
 
     // Update checksum
     checksum ^= bitInfo.bit << (bitNr & 1);
+    // and check checksum if appropriate
+    if(bitNr == 35) {
+      if(checksum != 0) {
+        // printf("Checksum error\n");
+        bitNr = 0;
+        checksum = 0;
+        memset(&data, 0, sizeof(data));
+        continue;
+      }
+    }
 
     // Increment bit pointer
     bitNr++;
