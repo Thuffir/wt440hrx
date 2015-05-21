@@ -1,5 +1,5 @@
 TARGET = wt440hrx
-LIBS = -lpigpio -lpthread -lrt
+LIBS = -lpigpiod_if -lpthread -lrt
 CC = gcc
 CFLAGS = -O3 -Wall -fomit-frame-pointer
 LFLAGS = -s
