@@ -44,6 +44,7 @@ typedef struct {
   uint8_t houseCode;
   uint8_t channel;
   uint8_t status;
+  uint8_t batteryLow;
   uint8_t humidity;
   uint8_t tempInteger;
   uint8_t tempFraction;
@@ -233,8 +234,12 @@ WT440hDataType RxData(void)
     else if((bitNr >= 10) && (bitNr <= 11)) {
       data.status = (data.status << 1) | bitInfo.bit;
     }
-    // Humidity [12 .. 19]
-    else if((bitNr >= 12) && (bitNr <= 19)) {
+    // Battery Low [12]
+    else if(bitNr == 12) {
+      data.batteryLow = bitInfo.bit;
+    }
+    // Humidity [13 .. 19]
+    else if((bitNr >= 13) && (bitNr <= 19)) {
       data.humidity = (data.humidity << 1) | bitInfo.bit;
     }
     // Temperature (Integer part) [20 .. 27]
@@ -284,7 +289,7 @@ int main(void)
   // Receive and decode messages
   while(1) {
     data = RxData();
-    printf("%u %u %u %u %.1f %u\n", data.houseCode, data.channel + 1, data.status, data.humidity,
+    printf("%u %u %u %u %u %.1f %u\n", data.houseCode, data.channel + 1, data.status, data.batteryLow, data.humidity,
       ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16), data.sequneceNr);
     fflush(stdout);
   }
