@@ -284,7 +284,7 @@ int main(void)
   // Receive and decode messages
   while(1) {
     data = RxData();
-    printf("%u %u %u %u %.1f %u\n", data.houseCode, data.channel, data.status, data.humidity,
+    printf("%u %u %u %u %.1f %u\n", data.houseCode, data.channel + 1, data.status, data.humidity,
       ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16), data.sequneceNr);
     fflush(stdout);
   }
