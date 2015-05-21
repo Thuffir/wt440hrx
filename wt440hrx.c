@@ -1,3 +1,15 @@
+/***********************************************************************************************************************
+ *
+ * WT440H Receiver / Decoder for Raspberry Pi
+ *
+ * (C) 2015 Gergely Budai
+ *
+ * This work is free. You can redistribute it and/or modify it under the
+ * terms of the Do What The Fuck You Want To Public License, Version 2,
+ * as published by Sam Hocevar. See the COPYING file for more details.
+ *
+ **********************************************************************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -5,22 +17,29 @@
 #include <string.h>
 #include <pigpio.h>
 
+// GPIO PIN
 #define INPUT_PIN                    5
+// Bit length in uS
 #define BIT_LENGTH                2000
+// +- Bit length tolerance in uS
 #define BIT_LENGTH_TOLERANCE       200
 
+// Calculated Thresholds for zeros and ones
 #define BIT_LENGTH_THRES_LOW      (BIT_LENGTH - BIT_LENGTH_TOLERANCE)
 #define BIT_LENGTH_THRES_HIGH     (BIT_LENGTH + BIT_LENGTH_TOLERANCE)
 #define HALFBIT_LENGTH_THRES_LOW  (BIT_LENGTH_THRES_LOW  / 2)
 #define HALFBIT_LENGTH_THRES_HIGH (BIT_LENGTH_THRES_HIGH / 2)
 
+// Pipe for communication between main thread and alert thread.
 int pipefd[2];
 
+// Bit Value with Timestamp
 typedef struct {
   uint8_t bit;
   uint32_t timeStamp;
 } BitType;
 
+// Decoded WT440H Message
 typedef struct {
   uint8_t houseCode;
   uint8_t channel;
@@ -30,101 +49,142 @@ typedef struct {
   uint8_t tempFraction;
   uint8_t sequneceNr;
   uint8_t checksum;
-} WT400hDataType;
+} WT440hDataType;
 
+/***********************************************************************************************************************
+ * Send bit to main Thread
+ **********************************************************************************************************************/
+void SendBit(uint8_t bit, uint32_t timeStamp)
+{
+  // Recognised Bit
+  BitType bitInfo;
+
+  // Fill bit infos
+  bitInfo.bit = bit;
+  bitInfo.timeStamp = timeStamp;
+  // Send via pipe
+  if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
+    perror("write()");
+    exit(EXIT_FAILURE);
+  }
+}
+
+/***********************************************************************************************************************
+ *
+ * GPIO Level Change Alert Handler
+ *
+ * Biphase Mark Decoder
+ *
+ **********************************************************************************************************************/
 void RxAlert(int gpio, int level, uint32_t timeStamp)
 {
+  // Internal State for bit recognition
   static enum {
     Init,
     BitStartReceived,
     HalfBitReceived
   } state = Init;
+  // Last timestamp for bit length calculation
   static uint32_t lastTimeStamp = 0;
+  // Bit Length
   uint32_t bitLength;
-  BitType bitInfo;
 
+  // Filter out non-interesting GPIOs (we should not get any)
   if(gpio != INPUT_PIN) {
     return;
   }
 
+  // Calculate bit length
   bitLength = timeStamp - lastTimeStamp;
+  lastTimeStamp = timeStamp;
 
+  // Bit recognition state machine
   switch(state) {
+    // Init State, no start Timestamp yet
     case Init: {
       state = BitStartReceived;
     }
     break;
 
+    // Start edge of a bit has been received
     case BitStartReceived: {
+      // Check bit length
       if((bitLength >= BIT_LENGTH_THRES_LOW) && (bitLength <= BIT_LENGTH_THRES_HIGH)) {
-        // Zero received
-        bitInfo.bit = 0;
-        bitInfo.timeStamp = timeStamp;
-        if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-          perror("write()");
-          exit(EXIT_FAILURE);
-        }
+        // Full bit length, Zero received
+        SendBit(0, timeStamp);
       }
       else if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
-        // First half of a One received
+        // Half bit length, first half of a One received
         state = HalfBitReceived;
       }
     }
     break;
 
+    // First half of a One received
     case HalfBitReceived: {
+      // Check bit length
       if((bitLength >= HALFBIT_LENGTH_THRES_LOW) && (bitLength <= HALFBIT_LENGTH_THRES_HIGH)) {
         // Second half of a One received
-        bitInfo.bit = 1;
-        bitInfo.timeStamp = timeStamp;
-        if(write(pipefd[1], &bitInfo, sizeof(bitInfo)) != sizeof(bitInfo)) {
-          perror("write()");
-          exit(EXIT_FAILURE);
-        }
+        SendBit(1, timeStamp);
       }
       state = BitStartReceived;
     }
     break;
 
+    // Invalid state (should not happen)
     default: {
-      state = Init;
+      perror("Invalid state");
+      exit(EXIT_FAILURE);
     }
     break;
   }
-
-  lastTimeStamp = timeStamp;
 }
 
+/***********************************************************************************************************************
+ * Init functions
+ **********************************************************************************************************************/
 void Init(void)
 {
+  // Create Pipe
   if(pipe(pipefd) == -1) {
     perror("pipe()");
     exit(EXIT_FAILURE);
   }
 
+  // Set smaple rate
   if(gpioCfgClock(10, PI_CLOCK_PCM, 0)) {
     perror("gpioCfgClock()");
     exit(EXIT_FAILURE);
   }
 
+  // Initialise GPIO library
   if(gpioInitialise() < 0)
   {
     perror("gpioInitialise()");
     exit(EXIT_FAILURE);
   }
 
+  // Set edge change alert function
   if(gpioSetAlertFunc(INPUT_PIN, RxAlert)) {
     perror("gpioSetAlertFunc()");
     exit(EXIT_FAILURE);
   }
 }
 
+/***********************************************************************************************************************
+ * Decode received bits into a WT440H Message
+ **********************************************************************************************************************/
 void RxData(void)
 {
+  // Preamble bits
   static const uint8_t preamble[] = {1, 1, 0, 0};
+  // Received bit info
   BitType bitInfo;
-  WT400hDataType data = { 0 };
+  // Decoded WT440H data
+  WT440hDataType data = { 0 };
+  // Previous bit timestamp and bit length
   uint32_t prevTimeStamp = 0, bitLength;
+  // Bit number counter
   uint8_t bitNr;
 
   // Data is 36 bits long
@@ -211,11 +271,16 @@ void RxData(void)
          data.checksum);
 }
 
+/***********************************************************************************************************************
+ * Main
+ **********************************************************************************************************************/
 int main(void)
 {
 
+  // Do init stuff
   Init();
 
+  // Receive and decode messages
   while(1) {
     RxData();
   }
