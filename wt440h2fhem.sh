@@ -1,5 +1,8 @@
 #!/bin/bash
 
+HOST=localhost
+PORT=7072
+
 while read housecode channel status battery humid temp; do
   batt_txt="ok"
   batt_stat=""
@@ -7,8 +10,5 @@ while read housecode channel status battery humid temp; do
     batt_txt="low"
     batt_stat=", Bat.low!"
   fi
-  echo "setreading wt440h_${housecode}_${channel} temperature ${temp}"
-  echo "setreading wt440h_${housecode}_${channel} humidity ${humid}"
-  echo "setreading wt440h_${housecode}_${channel} battery ${batt_txt}"
-  echo "set wt440h_${housecode}_${channel} ${temp}°C, ${humid}%${batt_stat}"
+  echo -ne "setreading wt440h_${housecode}_${channel} temperature ${temp}\nsetreading wt440h_${housecode}_${channel} humidity ${humid}\nsetreading wt440h_${housecode}_${channel} battery ${batt_txt}\nset wt440h_${housecode}_${channel} ${temp}°C, ${humid}%${batt_stat}\n" | nc ${HOST} ${PORT}
 done
