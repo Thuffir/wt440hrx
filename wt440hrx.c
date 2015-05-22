@@ -24,6 +24,9 @@
 // +- Bit length tolerance in uS
 #define BIT_LENGTH_TOLERANCE       200
 
+// Suppress identical messages within this timeframe in uS
+#define SUPPRESS_TIME             1000
+
 // Calculated Thresholds for zeros and ones
 #define BIT_LENGTH_THRES_LOW      (BIT_LENGTH - BIT_LENGTH_TOLERANCE)
 #define BIT_LENGTH_THRES_HIGH     (BIT_LENGTH + BIT_LENGTH_TOLERANCE)
@@ -49,6 +52,7 @@ typedef struct {
   uint8_t tempInteger;
   uint8_t tempFraction;
   uint8_t sequneceNr;
+  uint32_t timeStamp;
 } WT440hDataType;
 
 /***********************************************************************************************************************
@@ -253,7 +257,13 @@ WT440hDataType RxData(void)
     checksum ^= bitInfo.bit << (bitNr & 1);
     // and check checksum if appropriate
     if(bitNr == 35) {
-      if(checksum != 0) {
+      // If checksum correct
+      if(checksum == 0) {
+        // Record reception Timestamp
+        data.timeStamp = bitInfo.timeStamp;
+      }
+      // Checksum error
+      else {
         // printf("Checksum error\n");
         bitNr = 0;
         checksum = 0;
@@ -274,18 +284,31 @@ WT440hDataType RxData(void)
  **********************************************************************************************************************/
 int main(void)
 {
-  // Decoded WT440H data
-  WT440hDataType data;
+  // Decoded WT440H data and the previous one
+  WT440hDataType data, prevData = { 0 };
 
   // Do init stuff
   Init();
 
   // Receive and decode messages
   while(1) {
+    // Wait for Message
     data = RxData();
-    printf("%u %u %u %u %u %.1f %u\n", data.houseCode, data.channel + 1, data.status, data.batteryLow, data.humidity,
-      ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16), data.sequneceNr);
-    fflush(stdout);
+    // Check if a message is a duplicate of a last one
+    if((data.houseCode != prevData.houseCode) || (data.channel != prevData.channel) ||
+        (data.status != prevData.status) || (data.batteryLow != prevData.batteryLow) ||
+        (data.humidity != prevData.humidity) || (data.tempInteger != prevData.tempInteger) ||
+        (data.tempFraction != prevData.tempFraction) || ((data.timeStamp - prevData.timeStamp) >= SUPPRESS_TIME)) {
+      // If no duplicate, print
+      printf("%u %u %u %u %u %.1f\n", data.houseCode, data.channel + 1, data.status, data.batteryLow, data.humidity,
+        ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16));
+      fflush(stdout);
+    }
+    else {
+      printf("Duplicate with seqnr: %u, prevseqnr: %u\n", data.sequneceNr, prevData.sequneceNr);
+    }
+    // Remember old message
+    prevData = data;
   }
 
   return 0;
