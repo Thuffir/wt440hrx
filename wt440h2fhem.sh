@@ -1,6 +1,6 @@
 #!/bin/bash
 
-while read housecode channel status battery humid temp seqnr; do
+while read housecode channel status battery humid temp; do
   batt_txt="ok"
   batt_stat=""
   if [ $battery -eq 1 ]; then

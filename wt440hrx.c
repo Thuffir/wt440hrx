@@ -25,7 +25,7 @@
 #define BIT_LENGTH_TOLERANCE       200
 
 // Suppress identical messages within this timeframe in uS
-#define SUPPRESS_TIME             1000
+#define SUPPRESS_TIME          1000000
 
 // Calculated Thresholds for zeros and ones
 #define BIT_LENGTH_THRES_LOW      (BIT_LENGTH - BIT_LENGTH_TOLERANCE)
@@ -303,9 +303,6 @@ int main(void)
       printf("%u %u %u %u %u %.1f\n", data.houseCode, data.channel + 1, data.status, data.batteryLow, data.humidity,
         ((double)data.tempInteger - (double)50) + ((double)data.tempFraction / (double)16));
       fflush(stdout);
-    }
-    else {
-      printf("Duplicate with seqnr: %u, prevseqnr: %u\n", data.sequneceNr, prevData.sequneceNr);
     }
     // Remember old message
     prevData = data;
