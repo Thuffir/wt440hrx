@@ -4,6 +4,9 @@ CC = gcc
 CFLAGS = -O3 -Wall -fomit-frame-pointer
 LFLAGS = -s
 
+INSTALL = sudo install -m 755 -o fhem -g dialout
+INSTALLDIR = /opt/fhem
+
 .PHONY: default all clean
 
 default: $(TARGET)
@@ -23,3 +26,7 @@ $(TARGET): $(OBJECTS)
 clean:
 	-rm -f *.o
 	-rm -f $(TARGET)
+
+install: $(TARGET)
+	$(INSTALL) wt440h2fhem.sh $(INSTALLDIR)
+	$(INSTALL) -s wt440hrx $(INSTALLDIR)
