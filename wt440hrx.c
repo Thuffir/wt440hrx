@@ -15,7 +15,11 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
+#ifdef USE_PIGPIOD
 #include <pigpiod_if.h>
+#else
+#include <pigpio.h>
+#endif
 
 // GPIO PIN
 #define INPUT_PIN                    5
@@ -80,7 +84,11 @@ void SendBit(uint8_t bit, uint32_t timeStamp)
  * Biphase Mark Decoder
  *
  **********************************************************************************************************************/
+#ifdef USE_PIGPIOD
 void RxAlert(unsigned gpio, unsigned level, uint32_t timeStamp)
+#else
+void RxAlert(int gpio, int level, uint32_t timeStamp)
+#endif
 {
   // Internal State for bit recognition
   static enum {
@@ -155,6 +163,7 @@ void Init(void)
     exit(EXIT_FAILURE);
   }
 
+#ifdef USE_PIGPIOD
   // Connect to pigpiod
   if(pigpio_start(NULL, NULL) != 0)
   {
@@ -167,6 +176,26 @@ void Init(void)
     perror("callback()");
     exit(EXIT_FAILURE);
   }
+#else
+  // Set smaple rate
+  if(gpioCfgClock(10, PI_CLOCK_PCM, 0)) {
+    perror("gpioCfgClock()");
+    exit(EXIT_FAILURE);
+  }
+
+  // Initialise GPIO library
+  if(gpioInitialise() < 0)
+  {
+    perror("gpioInitialise()");
+    exit(EXIT_FAILURE);
+  }
+
+  // Set edge change alert function
+  if(gpioSetAlertFunc(INPUT_PIN, RxAlert)) {
+    perror("gpioSetAlertFunc()");
+    exit(EXIT_FAILURE);
+  }
+#endif
 }
 
 /***********************************************************************************************************************

@@ -1,11 +1,25 @@
+USE_PIGPIOD = false
+
+ifeq ($(USE_PIGPIOD), true)
+GPIOLIB = pigpiod_if
+GPIODEFINE = -DUSE_PIGPIOD
+else
+GPIOLIB = pigpio
+GPIODEFINE =
+endif
+
 TARGET = wt440hrx
-LIBS = -lpigpiod_if -lpthread -lrt
 CC = gcc
-CFLAGS = -O3 -Wall -fomit-frame-pointer
+CFLAGS = -O3 -Wall -fomit-frame-pointer $(GPIODEFINE)
+LIBS = -l$(GPIOLIB) -lpthread -lrt
 LFLAGS = -s
 
-INSTALL = sudo install -m 755 -o fhem -g dialout
 INSTALLDIR = /opt/fhem
+ifeq ($(USE_PIGPIOD), true)
+INSTALL = sudo install -m 755 -o fhem -g dialout
+else
+INSTALL = sudo install -m 755 -o root -g root
+endif
 
 .PHONY: default all clean
 
@@ -30,3 +44,4 @@ clean:
 install: $(TARGET)
 	$(INSTALL) wt440h2fhem.sh $(INSTALLDIR)
 	$(INSTALL) -s wt440hrx $(INSTALLDIR)
+	
