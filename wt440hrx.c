@@ -22,7 +22,7 @@
 #endif
 
 // GPIO PIN
-#define INPUT_PIN                    5
+#define INPUT_PIN                   25
 // Bit length in uS
 #define BIT_LENGTH                2000
 // +- Bit length tolerance in uS
