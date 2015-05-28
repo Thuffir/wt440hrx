@@ -1,3 +1,5 @@
 wt440hrx
 include
 *.o
+.project
+.cproject
